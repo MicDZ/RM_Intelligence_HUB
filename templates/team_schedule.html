@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ team.school }} - {{ team.team }} 赛程</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://s4.zstatic.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .transition-custom {
+                transition: all 0.2s ease;
+            }
+            .card-shadow {
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .schedule-card {
+                @apply bg-white rounded-xl shadow-lg overflow-hidden transition-custom hover:shadow-xl mb-4;
+            }
+            .schedule-card-header {
+                @apply bg-gray-100 p-3 border-b border-gray-200;
+            }
+            .schedule-card-body {
+                @apply p-4;
+            }
+            .team-name {
+                @apply font-medium;
+            }
+            .red-team {
+                @apply text-red-600 border-l-4 border-red-500 pl-3;
+            }
+            .blue-team {
+                @apply text-blue-600 border-l-4 border-blue-500 pl-3;
+            }
+            .score {
+                @apply font-bold text-xl;
+            }
+            .score-red {
+                @apply text-red-600;
+            }
+            .score-blue {
+                @apply text-blue-600;
+            }
+            .vs-text {
+                @apply text-gray-400 mx-2;
+            }
+            .replay-btn {
+                @apply bg-green-500 hover:bg-green-600 text-white rounded-md px-3 py-2 transition-colors inline-flex items-center;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col pt-16">
+    <!-- 导航栏 -->
+    <nav class="bg-blue-600 text-white shadow-lg fixed top-0 left-0 right-0 z-10">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <a href="{{ url_for('index') }}" class="text-white ml-4 text-xl font-bold">
+                    <i class="fa fa-shield text-xl"></i> 战队情报管理系统
+                </a>
+            </div>
+            <div class="flex space-x-3">
+                <a href="{{ url_for('view_team', id=team.id) }}" class="bg-white/20 text-white px-2 py-2 rounded-md font-medium transition-custom hover:bg-white/30 flex items-center">
+                    <i class="fa fa-arrow-left"></i>返回
+                </a>
+
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-2">{{ team.school }} - {{ team.team }} 赛程</h2>
+            <p class="text-gray-500">所有比赛场次</p>
+            
+            <!-- 赛程过滤器 -->
+            <div class="mt-4 mb-6 p-4 bg-white rounded-xl shadow-md">
+                <div class="flex flex-wrap gap-3">
+                    <button id="btn-all" class="px-4 py-2 bg-blue-500 text-white rounded-md">全部</button>
+                    <button id="btn-upcoming" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md">即将比赛</button>
+                    <button id="btn-completed" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md">已完成</button>
+                    <button id="btn-win" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md">胜利场次</button>
+                    <button id="btn-lose" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md">失利场次</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 赛程列表 -->
+        <div class="space-y-6">
+            {% if matches %}
+                {% for match in matches %}
+                    <!-- 赛程卡片 -->
+                    <div class="schedule-card 
+                        {% if match.status == 'DONE' %}completed-match{% else %}upcoming-match{% endif %}
+                        {% if match.is_win == True %}win-match{% elif match.is_win == False %}lose-match{% endif %}">
+                        <div class="schedule-card-header flex justify-between items-center">
+                            <div>
+                                                 
+
+                                {% if match.status == 'DONE' %}
+                                <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">已完成</span>
+                                {% else %}
+                                <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">即将比赛</span>
+                                {% endif %}
+                                <span class="text-gray-600 ml-2">{{ match.title }} - <span id="time-{{ match.id }}">{{ match.formatted_time or match.planStartedAt }}</span></span>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                BO{{ match.plan_game_count }} 
+                                {% if match.match_type == 'GROUP' %}小组赛{% else %}淘汰赛{% endif %}
+                            </div>
+                        </div>
+                        <div class="schedule-card-body">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- 红方信息 -->
+                                <div class="flex flex-col justify-center">
+                                    <div class="team-name red-team mb-2">{{ match.red_team.college }} - {{ match.red_team.name }}</div>
+                                    <div class="text-sm text-gray-500">小组内排名: {{ match.red_team.rank or '未知' }}</div>
+                                </div>
+                                
+                                <!-- 比分信息 -->
+                                <div class="flex items-center justify-center">
+                                    <div class="text-center">
+                                        <div class="flex items-center justify-center">
+                                            {% if match.status == 'DONE' %}
+                                                <span class="score score-red">{{ match.red_win_count }}</span>
+                                                <span class="vs-text">:</span>
+                                                <span class="score score-blue">{{ match.blue_win_count }}</span>
+                                            {% else %}
+                                                <span class="score score-red">--</span>
+                                                <span class="vs-text">VS</span>
+                                                <span class="score score-blue">--</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if match.status == 'DONE' %}
+                                            {% if match.result %}
+                                                {% if match.result == 'RED' %}
+                                                    <div class="text-sm text-red-500 mt-1">红方胜利</div>
+                                                {% elif match.result == 'BLUE' %}
+                                                    <div class="text-sm text-blue-500 mt-1">蓝方胜利</div>
+                                                {% else %}
+                                                    <div class="text-sm text-gray-500 mt-1">平局</div>
+                                                {% endif %}
+                                            {% endif %}
+                                            <!-- 修改回放链接，优化视觉效果和调试信息 -->
+                                            <a href="{{ match.replay_url }}" 
+                                               target="_blank" 
+                                               class="replay-btn mt-2 {% if match.replay_url == '#' %}opacity-50 cursor-not-allowed{% endif %}"
+                                               {% if match.replay_url == '#' %}onclick="event.preventDefault();"{% endif %}
+                                               title="{% if match.replay_url == '#' %}比赛ID: {{ match.id }}, 暂无对应回放{% else %}观看{{ match.red_team.college }} vs {{ match.blue_team.college }}回放{% endif %}">
+                                                <i class="fa fa-play-circle mr-1"></i> 
+                                                {% if match.replay_url == '#' %}暂无回放{% else %}观看回放{% endif %}
+                                            </a>
+                                        {% else %}
+                                            <div class="text-sm text-gray-500 mt-1">未开始</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- 蓝方信息 -->
+                                <div class="flex flex-col justify-center items-end">
+                                    <div class="team-name blue-team mb-2 text-right">{{ match.blue_team.college }} - {{ match.blue_team.name }}</div>
+                                    <div class="text-sm text-gray-500">小组内排名: {{ match.blue_team.rank or '未知' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <!-- 空状态提示 -->
+                <div id="empty-state" class="bg-white rounded-xl shadow-lg p-8 text-center mt-8">
+                    <div class="flex flex-col items-center">
+                        <i class="fa fa-calendar-o text-gray-400 text-5xl mb-4"></i>
+                        <h3 class="text-xl font-medium text-gray-800 mb-2">暂无赛程数据</h3>
+                        <p class="text-gray-600">该战队目前没有匹配的赛程信息</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2025 狼牙战队 | 设计与开发</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 格式化所有比赛时间
+            document.querySelectorAll('[id^="time-"]').forEach(timeEl => {
+                const timeText = timeEl.textContent;
+                // 检查是否是ISO 8601格式的时间字符串 (如 2025-05-29T02:25:00Z)
+                if (timeText && timeText.includes('T') && timeText.includes('Z')) {
+                    try {
+                        const date = new Date(timeText);
+                        if (!isNaN(date.getTime())) {
+                            const year = date.getFullYear();
+                            const month = date.getMonth() + 1; // 月份从0开始
+                            const day = date.getDate();
+                            const hours = String(date.getHours()).padStart(2, '0');
+                            const minutes = String(date.getMinutes()).padStart(2, '0');
+                            
+                            // 修改格式为"年月日"的中文格式
+                            timeEl.textContent = `${year}年${month}月${day}日 ${hours}:${minutes}`;
+                        }
+                    } catch (e) {
+                        console.error('时间格式化失败:', e);
+                    }
+                } else if (timeText && timeText.includes('-')) {
+                    // 处理已格式化但格式不正确的时间字符串 (如 2025-05-29 13:10)
+                    try {
+                        const parts = timeText.split(' ');
+                        if (parts.length === 2) {
+                            const dateParts = parts[0].split('-');
+                            if (dateParts.length === 3) {
+                                const year = dateParts[0];
+                                const month = parseInt(dateParts[1], 10); // 去掉前导零
+                                const day = parseInt(dateParts[2], 10); // 去掉前导零
+                                
+                                timeEl.textContent = `${year}年${month}月${day}日 ${parts[1]}`;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('已格式化时间转换失败:', e);
+                    }
+                }
+            });
+            
+            // 赛程筛选功能
+            const btnAll = document.getElementById('btn-all');
+            const btnUpcoming = document.getElementById('btn-upcoming');
+            const btnCompleted = document.getElementById('btn-completed');
+            const btnWin = document.getElementById('btn-win');
+            const btnLose = document.getElementById('btn-lose');
+            
+            const allMatches = document.querySelectorAll('.schedule-card');
+            const upcomingMatches = document.querySelectorAll('.upcoming-match');
+            const completedMatches = document.querySelectorAll('.completed-match');
+            const winMatches = document.querySelectorAll('.win-match');
+            const loseMatches = document.querySelectorAll('.lose-match');
+            
+            const resetButtons = () => {
+                [btnAll, btnUpcoming, btnCompleted, btnWin, btnLose].forEach(btn => {
+                    btn.classList.remove('bg-blue-500', 'text-white');
+                    btn.classList.add('bg-gray-200', 'hover:bg-gray-300');
+                });
+            };
+            
+            const showAllMatches = () => {
+                allMatches.forEach(match => match.classList.remove('hidden'));
+                
+                // 如果没有赛程，显示空状态
+                if (allMatches.length === 0) {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                } else {
+                    document.getElementById('empty-state')?.classList.add('hidden');
+                }
+            };
+            
+            const hideAllMatches = () => {
+                allMatches.forEach(match => match.classList.add('hidden'));
+                document.getElementById('empty-state')?.classList.add('hidden');
+            };
+            
+            btnAll?.addEventListener('click', () => {
+                resetButtons();
+                btnAll.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+                btnAll.classList.add('bg-blue-500', 'text-white');
+                showAllMatches();
+            });
+            
+            btnUpcoming?.addEventListener('click', () => {
+                resetButtons();
+                btnUpcoming.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+                btnUpcoming.classList.add('bg-blue-500', 'text-white');
+                hideAllMatches();
+                upcomingMatches.forEach(match => match.classList.remove('hidden'));
+                
+                // 如果没有即将比赛的场次，显示空状态
+                if (upcomingMatches.length === 0) {
+                    if (document.getElementById('empty-state')) {
+                        document.getElementById('empty-state').classList.remove('hidden');
+                    } else {
+                        // 创建一个空状态提示
+                        const emptyDiv = document.createElement('div');
+                        emptyDiv.id = 'empty-state';
+                        emptyDiv.className = 'bg-white rounded-xl shadow-lg p-8 text-center mt-8';
+                        emptyDiv.innerHTML = `
+                            <div class="flex flex-col items-center">
+                                <i class="fa fa-calendar-o text-gray-400 text-5xl mb-4"></i>
+                                <h3 class="text-xl font-medium text-gray-800 mb-2">暂无即将比赛的场次</h3>
+                                <p class="text-gray-600">该战队目前没有即将进行的比赛</p>
+                            </div>
+                        `;
+                        document.querySelector('.space-y-6').appendChild(emptyDiv);
+                    }
+                }
+            });
+            
+            btnCompleted?.addEventListener('click', () => {
+                resetButtons();
+                btnCompleted.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+                btnCompleted.classList.add('bg-blue-500', 'text-white');
+                hideAllMatches();
+                completedMatches.forEach(match => match.classList.remove('hidden'));
+                
+                // 如果没有已完成的比赛，显示空状态
+                if (completedMatches.length === 0) {
+                    if (document.getElementById('empty-state')) {
+                        document.getElementById('empty-state').classList.remove('hidden');
+                    } else {
+                        const emptyDiv = document.createElement('div');
+                        emptyDiv.id = 'empty-state';
+                        emptyDiv.className = 'bg-white rounded-xl shadow-lg p-8 text-center mt-8';
+                        emptyDiv.innerHTML = `
+                            <div class="flex flex-col items-center">
+                                <i class="fa fa-calendar-o text-gray-400 text-5xl mb-4"></i>
+                                <h3 class="text-xl font-medium text-gray-800 mb-2">暂无已完成的比赛</h3>
+                                <p class="text-gray-600">该战队目前没有已完成的比赛记录</p>
+                            </div>
+                        `;
+                        document.querySelector('.space-y-6').appendChild(emptyDiv);
+                    }
+                }
+            });
+            
+            btnWin?.addEventListener('click', () => {
+                resetButtons();
+                btnWin.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+                btnWin.classList.add('bg-blue-500', 'text-white');
+                hideAllMatches();
+                winMatches.forEach(match => match.classList.remove('hidden'));
+                
+                // 如果没有胜利场次，显示空状态
+                if (winMatches.length === 0) {
+                    if (document.getElementById('empty-state')) {
+                        document.getElementById('empty-state').classList.remove('hidden');
+                    } else {
+                        const emptyDiv = document.createElement('div');
+                        emptyDiv.id = 'empty-state';
+                        emptyDiv.className = 'bg-white rounded-xl shadow-lg p-8 text-center mt-8';
+                        emptyDiv.innerHTML = `
+                            <div class="flex flex-col items-center">
+                                <i class="fa fa-trophy text-gray-400 text-5xl mb-4"></i>
+                                <h3 class="text-xl font-medium text-gray-800 mb-2">暂无胜利场次</h3>
+                                <p class="text-gray-600">该战队目前没有胜利的比赛记录</p>
+                            </div>
+                        `;
+                        document.querySelector('.space-y-6').appendChild(emptyDiv);
+                    }
+                }
+            });
+            
+            btnLose?.addEventListener('click', () => {
+                resetButtons();
+                btnLose.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+                btnLose.classList.add('bg-blue-500', 'text-white');
+                hideAllMatches();
+                loseMatches.forEach(match => match.classList.remove('hidden'));
+                
+                // 如果没有失利场次，显示空状态
+                if (loseMatches.length === 0) {
+                    if (document.getElementById('empty-state')) {
+                        document.getElementById('empty-state').classList.remove('hidden');
+                    } else {
+                        const emptyDiv = document.createElement('div');
+                        emptyDiv.id = 'empty-state';
+                        emptyDiv.className = 'bg-white rounded-xl shadow-lg p-8 text-center mt-8';
+                        emptyDiv.innerHTML = `
+                            <div class="flex flex-col items-center">
+                                <i class="fa fa-meh-o text-gray-400 text-5xl mb-4"></i>
+                                <h3 class="text-xl font-medium text-gray-800 mb-2">暂无失利场次</h3>
+                                <p class="text-gray-600">该战队目前没有失利的比赛记录</p>
+                            </div>
+                        `;
+                        document.querySelector('.space-y-6').appendChild(emptyDiv);
+                    }
+                }
+            });
+            
+            // 初始显示全部赛程
+            showAllMatches();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加战队</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://s4.zstatic.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        .search-result {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .search-result:hover {
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col pt-16"> <!-- 添加pt-16顶部内边距 -->
+    <!-- 导航栏 - 添加fixed和z-10类 -->
+    <nav class="bg-blue-600 text-white shadow-lg fixed top-0 left-0 right-0 z-10">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <a href="{{ url_for('index') }}" class="text-white ml-4 text-xl font-bold">
+                    <i class="fa fa-shield text-xl"></i> 战队情报管理系统
+                </a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="{{ url_for('logout') }}"
+                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium transition-custom flex items-center">
+                    <i class="fa fa-sign-out mr-2"></i>登出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-4xl">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">添加新战队</h2>
+
+            <form method="post" class="space-y-6">
+                <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">搜索战队（学校/队伍名称）</label>
+                    <input type="text" id="search"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom"
+                        placeholder="输入搜索内容">
+                    <div id="results"
+                        class="absolute z-10 top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto hidden">
+                        {% for team in predefined_teams %}
+                        <div class="p-3 search-result" 
+                             data-school="{{ team.school }}" 
+                             data-team="{{ team.team }}" 
+                             data-rank="{{ team.rank }}"> <!-- 新增data-rank属性 -->
+                            {{ team.school }} - {{ team.team }}（排名：{{ team.rank }}）
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 学校和队伍名称隐藏字段 -->
+                <input type="hidden" name="school" id="school">
+                <input type="hidden" name="team" id="team">
+                
+                <!-- 新增排名输入字段 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">队伍排名</label>
+                    <input type="number" name="rank" id="rank" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                           placeholder="请输入排名（选填，预定义队伍自动填充）">
+                </div>
+
+                <button type="submit" id="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-lg transition-custom flex items-center justify-center"
+                    disabled>
+                    <i class="fa fa-plus mr-2"></i> 添加战队
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2025 狼牙战队 | 设计与开发</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const search = document.getElementById('search');
+            const results = document.getElementById('results');
+            const schoolInput = document.getElementById('school');
+            const teamInput = document.getElementById('team');
+            const rankInput = document.getElementById('rank'); // 新增排名输入框
+            const submit = document.getElementById('submit');
+
+            search.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                results.innerHTML = '';
+                results.classList.add('hidden');
+
+                if (query.length < 1) {
+                    // 清空输入框
+                    schoolInput.value = '';
+                    teamInput.value = '';
+                    rankInput.value = '';
+                    submit.disabled = true;
+                    return;
+                }
+
+                // 过滤预定义队伍
+                const matched = [];
+                {% for team in predefined_teams %}
+                if ('{{ team.school }} {{ team.team }}'.toLowerCase().includes(query)) {
+                    matched.push({
+                        school: '{{ team.school }}',
+                        team: '{{ team.team }}',
+                        rank: '{{ team.rank }}' // 获取排名
+                    });
+                }
+                {% endfor %}
+
+                if (matched.length > 0) {
+                    results.innerHTML = '';
+                    matched.forEach(({ school, team, rank }) => {
+                        const div = document.createElement('div');
+                        div.className = 'p-3 search-result';
+                        div.dataset.school = school;
+                        div.dataset.team = team;
+                        div.dataset.rank = rank; // 设置data-rank属性
+                        div.textContent = `${school} - ${team}（排名：${rank}）`;
+                        results.appendChild(div);
+                    });
+                    results.classList.remove('hidden');
+                }
+            });
+
+            results.addEventListener('click', (e) => {
+                if (e.target.classList.contains('search-result')) {
+                    const school = e.target.dataset.school;
+                    const team = e.target.dataset.team;
+                    const rank = e.target.dataset.rank; // 获取排名
+
+                    // 填充隐藏字段和排名输入框
+                    schoolInput.value = school;
+                    teamInput.value = team;
+                    rankInput.value = rank; // 自动填充排名
+                    submit.disabled = false;
+
+                    // 显示选中的战队名称和排名
+                    search.value = `${school} - ${team}（排名：${rank}）`;
+                    results.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ team.school }} - {{ team.team }} 战术数据</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://s4.zstatic.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .transition-custom {
+                transition: all 0.2s ease;
+            }
+            .card-shadow {
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .data-card {
+                @apply bg-white rounded-xl shadow-lg overflow-hidden transition-custom hover:shadow-xl;
+            }
+            .data-card-header {
+                @apply bg-blue-600 text-white p-4;
+            }
+            .data-card-body {
+                @apply p-5;
+            }
+            .data-item {
+                @apply mb-4 pb-4 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0;
+            }
+            .data-item-title {
+                @apply text-sm font-medium text-gray-700 mb-1;
+            }
+            .data-item-content {
+                @apply px-4 py-2 bg-gray-50 rounded-lg min-h-[2.5rem];
+            }
+            .rank-badge {
+                @apply inline-block bg-gray-200 text-gray-700 font-medium px-2 py-1 rounded-full text-sm ml-2;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col pt-16"> <!-- 添加pt-16顶部内边距 -->
+    <!-- 导航栏 - 添加fixed和z-10类 -->
+    <nav class="bg-blue-600 text-white shadow-lg fixed top-0 left-0 right-0 z-10">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <a href="{{ url_for('index') }}" class="text-white ml-4 text-xl font-bold">
+                    <i class="fa fa-shield text-xl"></i> 战队情报管理系统
+                </a>
+            </div>
+            <div class="flex space-x-3">
+
+                <a href="{{ url_for('edit_team', id=team.id) }}" class="bg-white text-blue-600 px-4 py-2 rounded-md font-medium transition-custom hover:bg-gray-100 flex items-center">
+                    <i class="fa fa-pencil mr-2"></i>编辑
+                </a>
+
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="mb-8">
+            <!-- 修改logo容器 -->
+            <div class="flex items-center mb-4">
+                <div id="school-logo" class="w-20 h-20 mr-4 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <i class="fa fa-university text-gray-400 text-2xl"></i> <!-- 默认图标，当找到logo时会被替换 -->
+                </div>
+                <div class="flex-grow">
+                    <h2 class="text-2xl font-bold">
+                        {{ team.school }} - {{ team.team }}
+                        <span class="rank-badge 
+                               {% if team.rank_exam and team.rank_exam <= 10 %}bg-yellow-100 text-yellow-800 border border-yellow-300
+                              {% elif team.rank_exam and team.rank_exam <= 30 %}bg-gray-100 text-gray-700 border border-gray-300
+                              {% elif team.rank_exam %}bg-gray-200 text-gray-700
+                              {% else %}bg-gray-200 text-gray-700{% endif %}">
+                            {% if team.rank %}
+                                积分榜排名：{{ team.rank }}
+                            {% else %}
+                                积分榜未排名
+                            {% endif %}
+                        </span>
+                        <span class="rank-badge
+                              {% if team.rank_exam and team.rank_exam <= 4 %}bg-yellow-100 text-yellow-800 border border-yellow-300
+                              {% elif team.rank_exam and team.rank_exam <= 8 %}bg-gray-100 text-gray-700 border border-gray-300
+                              {% elif team.rank_exam %}bg-gray-200 text-gray-700
+                              {% else %}bg-gray-200 text-gray-700{% endif %}">
+                            {% if team.rank_exam %}
+                                完整形态排名：{{ team.rank_exam }}
+                            {% else %}
+                                完整形态未排名
+                            {% endif %}
+                        </span>
+                        <span class="rank-badge">
+                            {% if team.money is not none %}
+                                初始金币：{{ team.money }}
+                            {% else %}
+                                金币未设置
+                            {% endif %}
+                        </span>
+                        <span class="rank-badge {% if team.group == 'A' %}bg-blue-100 text-blue-800{% else %}bg-purple-100 text-purple-800{% endif %}">
+                            {{ team.group }}组
+                        </span>
+                    </h2>
+                    <!-- 添加赛程按钮 -->
+                    <div class="mt-2">
+                        <a href="{{ url_for('team_schedule', id=team.id) }}" class="inline-flex items-center px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-md transition-colors">
+                            <i class="fa fa-calendar mr-2"></i> 查看赛程
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <p class="text-gray-500">简评</p>
+            {{ team.comment or '未填写' }}
+            <hr>
+            <p class="text-gray-500 mt-4">更新时间</p>
+            {% set utc_time = team.updated_at %}
+            {% set local_time = utc_time.replace(hour=(utc_time.hour + 8) % 24) %}
+            {{ local_time.strftime('%Y年%m月%d日 %H:%M') }}
+            
+            <!-- 添加兵种显示控制区域 -->
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <h3 class="text-lg font-medium text-blue-800 mb-2">显示兵种</h3>
+                <div class="flex flex-wrap gap-3" id="robot-filter">
+                    {% for category in data.keys() %}
+                    <label class="inline-flex items-center px-3 py-2 bg-white rounded-md border border-gray-200 shadow-sm cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="robot-toggle" value="{{ category }}" class="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" 
+                               {% if category in ['步兵1', '步兵2'] %}checked{% endif %}>
+                        <span>{{ category }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 数据卡片网格 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for category, items in data.items() %}
+            <!-- {{ category }}数据 -->
+            <div class="data-card robot-card" data-robot-type="{{ category }}" {% if category not in ['步兵1', '步兵2'] %}style="display: none;"{% endif %}>
+                <div class="data-card-header flex justify-between items-center">
+                    <div class="flex items-center">
+                        <h3 class="text-lg font-bold">{{ category }}</h3>
+                    </div>
+                    {% if images and category in images and images[category]|length > 0 %}
+                    <a href="{{ url_for('team_images', team_id=team.id) }}#{{ category }}" class="text-white bg-blue-500 hover:bg-blue-600 rounded-md px-3 py-1 text-sm z-10">
+                        <i class="fa fa-image mr-1"></i> 查看图片 ({{ images[category]|length }})
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="data-card-body">
+                    <!-- 将图片预览区移到最前面 -->
+                    {% if images and category in images and images[category]|length > 0 %}
+                    <div class="mb-4 border-b pb-4">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">相关图片 ({{ images[category]|length }})</h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {% for image in images[category] %}
+                            <div class="relative group border rounded-lg overflow-hidden bg-gray-100">
+                                <img src="{{ url_for('static', filename='uploads/' + image.filename) }}" alt="{{ image.description }}" class="w-full h-24 object-cover" >
+                                <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <a href="{{ url_for('static', filename='uploads/' + image.filename) }}" target="_blank" class="text-white bg-blue-500 rounded-full p-2 hover:bg-blue-600 transition-colors">
+                                        <i class="fa fa-eye"></i>
+                                    </a>
+                                </div>
+                                {% if image.description %}
+                                <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {{ image.description }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- 战术数据条目 -->
+                    {% for item in items %}
+                    <div class="data-item">
+                        <div class="data-item-title">{{ item.item }}</div>
+                        <div class="data-item-content">{{ item.content or '未填写' }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2025 狼牙战队 | 设计与开发</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载机器人数据
+            fetchRobotData();
+            
+            // 添加兵种过滤功能
+            setupRobotFilter();
+        });
+        
+        // 设置兵种过滤功能
+        function setupRobotFilter() {
+            const checkboxes = document.querySelectorAll('input[name="robot-toggle"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const robotType = this.value;
+                    const cards = document.querySelectorAll(`.robot-card[data-robot-type="${robotType}"]`);
+                    
+                    cards.forEach(card => {
+                        if (this.checked) {
+                            card.style.display = '';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        }
+
+        // 加载机器人数据
+        async function fetchRobotData() {
+            try {
+                const response = await fetch('{{ url_for("serve_robot_data") }}');
+                const data = await response.json();
+                
+                // 计算所有指标的排名
+                const rankings = calculateRankings(data);
+                
+                // 处理当前队伍数据并显示
+                processRobotData(data, rankings);
+            } catch (error) {
+                console.error('获取机器人数据失败:', error);
+            }
+        }
+
+        // 计算所有指标的排名
+        function calculateRankings(data) {
+            // 以机器人类型和指标为键创建数据结构
+            const robotMetrics = {};
+            
+            // 字段映射表，与显示中使用的相同
+            const fieldMap = {
+                'eaSmallHitRate': '小弹丸命中率(%)',
+                'eagHurt': '局均伤害',
+                'eaKDA': 'KDA',
+                'eagKdaScore': 'KDA得分',
+                'gkDamage': '局均建筑伤害',
+                'gKillCount': '局均击杀数',
+                'eaBigHitRate': '大弹丸命中率(%)',
+                'eaSnipeCnt': '狙击次数',
+                'etDartOutpostCnt': '前哨站命中',
+                'etDartFixedCnt': '基地固定靶命中',
+                'etDartRDFixCnt': '基地随机固定靶命中',
+                'etDartRDMoveCnt': '基地随机移动靶命中',
+                'eaRadarMarkerTime': '雷达标记时间(秒)',
+                'eaRadarDebuffDmg': '雷达易伤增伤(%)',
+                'eaExchangeEcon': '局均兑换经济',
+                'avgMineTime': '平均兑矿时间(秒)',
+                'avgMineDiff': '平均兑矿难度'
+            };
+            
+            // 收集所有队伍的数据，按机器人类型分组
+            for (const zone of data.zones) {
+                for (const team of zone.teams) {
+                    for (const robot of team.robots) {
+                        const robotType = robot.type;
+                        
+                        // 初始化这个类型的机器人的指标容器
+                        if (!robotMetrics[robotType]) {
+                            robotMetrics[robotType] = {};
+                            Object.keys(fieldMap).forEach(field => {
+                                robotMetrics[robotType][field] = [];
+                            });
+                        }
+                        
+                        // 收集机器人各项指标
+                        for (const [field, value] of Object.entries(robot)) {
+                            // 跳过非数值或为0的字段
+                            if (!fieldMap[field] || value === 0 || field === 'eaKDA') continue;
+                            
+                            // 添加到对应类型的机器人的指标数组
+                            robotMetrics[robotType][field].push({
+                                value: value,
+                                team: team.collegeName,
+                                robotType: robotType
+                            });
+                        }
+                        
+                        // 单独处理KDA
+                        // 如果没有kda数据，则跳过
+                        if (robot.eaKDA ) {
+                            const kdaValues = robot.eaKDA.split('/');
+                    
+                            if (kdaValues.length === 3) {
+                                // 如果三个数字合起来小于0.1不添加
+                                if (kdaValues.every(num => parseFloat(num) < 0.1)) continue;
+                                
+                                const kdaScore = (parseFloat(kdaValues[0]) + parseFloat(kdaValues[2])) / Math.max(1, parseFloat(kdaValues[1]));
+                                robotMetrics[robotType]['eaKDA'].push({
+                                    value: kdaScore,
+                                    team: team.collegeName,
+                                    robotType: robotType,
+                                    originalValue: robot.eaKDA
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            
+            console.log('收集到的机器人指标:', robotMetrics);
+            // 计算每个兵种每个指标的排名
+            const rankings = {};
+            
+            // 初始化rankings对象结构
+            Object.keys(robotMetrics).forEach(robotType => {
+                rankings[robotType] = {};
+            });
+            
+            // 对每种机器人的每个指标计算排名
+            for (const [robotType, metrics] of Object.entries(robotMetrics)) {
+                for (const [field, values] of Object.entries(metrics)) {
+                    // 跳过没有数据的指标
+                    if (values.length === 0) continue;
+                    // 根据指标值排序（大多数指标是越大越好）
+                    let sortedValues;
+                    
+                    // 兑矿时间例外，越小越好
+                    if (field === 'avgMineTime') {
+                        sortedValues = [...values].sort((a, b) => a.value - b.value);
+                    } else {
+                        sortedValues = [...values].sort((a, b) => b.value - a.value);
+                    }
+                    // 为每个队伍分配排名
+                    rankings[robotType][field] = {};
+                    sortedValues.forEach((item, index) => {
+                        const key = item.team;
+                        rankings[robotType][field][key] = {
+                            rank: index + 1,
+                            total: sortedValues.length,
+                            originalValue: item.originalValue
+                        };
+                    });
+                }
+            }
+            console.log(rankings); 
+            return rankings;
+        }
+
+        // 处理机器人数据
+        function processRobotData(data, rankings) {
+            // 获取当前队伍名称和学校名称
+            var teamName = "{{ team.team }}";
+            var schoolName = "{{ team.school }}";
+            if (teamName == "DEMO") {
+                teamName = "RoboWalker";
+                schoolName = "中国科学技术大学";
+            }
+
+            console.log('当前队伍:', teamName, '学校:', schoolName);
+            // 在所有赛区中查找匹配的队伍
+            let teamData = null;
+            
+            for (const zone of data.zones) {
+                for (const team of zone.teams) {
+                    // 改进学校名称匹配逻辑，使用更精确的匹配
+                    // 1. 尝试完全匹配
+                    if (team.collegeName === schoolName) {
+                        teamData = team;
+                        console.log(team)
+                        break;
+                    }
+                    console.log('尝试匹配学校:', team.collegeName, '与', schoolName);
+
+                    // // 2. 如果学校名称包含括号（可能是分校），需要精确匹配
+                    // if (schoolName.includes('（') || schoolName.includes('(')||team.collegeName.includes('分')) {
+                    //     // 分校需要精确匹配，跳过模糊匹配
+                    //     console.log('分校匹配，跳过模糊匹配');
+                    //     continue;
+                    // }
+                    
+                    
+                    // // 3. 对于没有括号的学校名称，允许模糊匹配，但需要避免匹配到分校
+                    // if (team.collegeName.includes(schoolName) && 
+                    //     !team.collegeName.includes('（') && 
+                    //     !team.collegeName.includes('(')) {
+                    //     teamData = team;
+                    //     break;
+                    // }
+                }
+                if (teamData) break;
+            }
+            
+            if (!teamData) {
+                console.log('未找到匹配的队伍数据');
+                showDataMissingMessage();
+                return;
+            }
+            
+            // 显示学校logo
+            if (teamData.collegeName) {
+                const logoContainer = document.getElementById('school-logo');
+                // 清空默认内容
+                logoContainer.innerHTML = '';
+                
+                // 创建img元素
+                const logoImg = document.createElement('img');
+                
+                // 优先使用本地缓存的 logo
+                logoImg.src = "{{ url_for('serve_school_logo', college_name='') }}" + teamData.collegeName;
+                logoImg.alt = teamData.collegeName;
+                logoImg.className = 'w-full h-full object-contain';
+                logoImg.style.maxWidth = '100%';
+                logoImg.style.maxHeight = '100%';
+                
+                // 添加错误处理，如果本地 logo 加载失败，则尝试原始 URL
+                logoImg.onerror = function() {
+                    if (teamData.collegeLogo) {
+                        this.src = teamData.collegeLogo;
+                    }
+                };
+                
+                // 添加到容器
+                logoContainer.appendChild(logoImg);
+            }
+            
+            // 将机器人数据按类型分类
+            const robotsByType = {};
+            
+            for (const robot of teamData.robots) {
+                robotsByType[robot.type] = robot;
+            }
+            
+            // 将数据添加到对应的卡片中
+            displayRobotData(robotsByType, rankings, teamData.collegeName);
+            
+            // 只在必要时显示数据缺失提示
+            // 移除对showDataMissingMessage(rankings)的直接调用
+        }
+
+        // 显示数据缺失的提示信息
+        function showDataMissingMessage(rankings) {
+            // 为每个机器人卡片添加"官方数据源暂缺失"提示
+            document.querySelectorAll('.data-card-body').forEach(cardBody => {
+                // 检查卡片中是否已经有数据缺失提示，避免重复添加
+                if (cardBody.querySelector('.missing-data-section')) {
+                    return;
+                }
+                
+                // 检查卡片中是否已经有官方数据源区域，如果有则不添加缺失提示
+                if (cardBody.querySelector('[class*="border-t border-gray-200"]:not(.missing-data-section)')) {
+                    return;
+                }
+                
+                // 创建官方数据区域
+                // 如果卡片中没有这个队伍的数据，则添加提示
+                const collegeName = "{{ team.school }}";
+                console.log('当前学校名称:', collegeName);
+                if (collegeName == "演示大学") {
+                    // 特例处理，DEMO战队
+                    return;
+                }
+                if (!rankings || !Object.keys(rankings).length) {
+                    return;
+                }
+                const card = cardBody.closest('.data-card');
+
+                // 检查是否有对应的机器人数据
+                const robotType = card.querySelector('.data-card-header h3').textContent.trim();
+                // 如果有对应的机器人类型数据，则不显示提示，在rankings的对应robotType中查找这个学校
+                console.log('检查机器人类型:', robotType, '学校:', collegeName);
+                // 获取robotType的英文名
+                const robotTypeMap = {
+                    '步兵1': 'Infantry',
+                    '步兵2': 'Infantry',
+                    '步兵(备用)': 'Infantry',
+                    '英雄': 'Hero',
+                    '英雄(备用)': 'Hero',
+                    '工程': 'Sapper',
+                    '工程(备用)': 'Sapper',
+                    '无人机': 'Airplane',
+                    '哨兵': 'Guard',
+                    '飞镖': 'Dart',
+                    '雷达': 'Radar'
+                };
+                console.log('当前排名数据:', rankings[robotTypeMap[robotType]]);
+                // 遍历rankings[robotTypeMap[robotType]]，检查当前指标下有没有这个学校的数据
+                let hasData = false;
+                if (rankings[robotTypeMap[robotType]]) {
+                    for (const field in rankings[robotTypeMap[robotType]]) {
+                        if (rankings[robotTypeMap[robotType]][field][collegeName]) {
+                            hasData = true;
+                            break;
+                        }
+                    }
+                }
+                // 重要：如果有数据，不显示"官方数据源暂缺失"提示
+                if (hasData) return;
+                
+                // 添加唯一类名以便识别
+                const missingDataSection = document.createElement('div');
+                missingDataSection.className = 'mt-4 pt-4 border-t border-gray-200 missing-data-section';
+                
+                // 添加标题
+                const title = document.createElement('h4');
+                title.className = 'text-sm font-medium text-gray-700 mb-2';
+                title.innerHTML = '<span class="bg-gray-100 text-gray-600 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">官方数据源暂缺失</span>';
+                
+                // 添加提示内容
+                const content = document.createElement('p');
+                content.className = 'text-sm text-gray-500';
+                content.textContent = '比赛尚未开始，未在官方数据源中找到匹配此战队的数据';
+                
+                missingDataSection.appendChild(title);
+                missingDataSection.appendChild(content);
+                cardBody.appendChild(missingDataSection);
+            });
+        }
+
+        // 找到包含特定文本的卡片
+        function findCardByTitle(title) {
+            const headers = document.querySelectorAll('.data-card-header h3.text-lg.font-bold');
+            for (const header of headers) {
+                if (header.textContent.trim() === title) {
+                    return header.closest('.data-card');
+                }
+            }
+            return null;
+        }
+
+        // 将数据显示在页面上
+        function displayRobotData(robotsByType, rankings, collegeName) {
+            // 类型映射表：英文到中文
+            const typeMap = {
+                'Infantry': '步兵',
+                'Hero': '英雄',
+                'Sapper': '工程',
+                'Airplane': '无人机',
+                'Guard': '哨兵',
+                'Dart': '飞镖',
+                'Radar': '雷达'
+            };
+            
+            // 字段映射表：英文字段到中文描述
+            const fieldMap = {
+                'eaSmallHitRate': '小弹丸命中率(%)',
+                'eagHurt': '平均伤害',
+                'eaKDA': 'KDA',
+                'eagKdaScore': 'KDA得分',
+                'gkDamage': '局均建筑伤害',
+                'gKillCount': '局均击杀数',
+                'eaBigHitRate': '大弹丸命中率(%)',
+                'eaSnipeCnt': '狙击次数',
+                'etDartOutpostCnt': '前哨站命中',
+                'etDartFixedCnt': '基地固定靶命中',
+                'etDartRDFixCnt': '基地随机固定靶命中',
+                'etDartRDMoveCnt': '基地随机移动靶命中',
+                'eaRadarMarkerTime': '雷达标记时间(秒)',
+                'eaRadarDebuffDmg': '雷达易伤增伤(%)',
+                'eaExchangeEcon': '局均兑换经济',
+                'avgMineTime': '平均兑矿时间(秒)',
+                'avgMineDiff': '平均兑矿难度'
+            };
+            
+            // 为每种机器人创建数据
+            for (const [type, robot] of Object.entries(robotsByType)) {
+                // 获取对应的中文类型名
+                let chineseTypes = [];
+                
+                if (type === 'Infantry') {
+                    // 步兵数据添加到所有步兵卡片
+                    chineseTypes = ['步兵1', '步兵2', '步兵(备用)'];
+                } else if (type == 'Hero'){
+                    chineseTypes = ['英雄', '英雄(备用)'];
+                }
+                else if (type == 'Sapper') {
+                    chineseTypes = ['工程', '工程(备用)'];
+                }
+                else if (typeMap[type]) {
+                    chineseTypes = [typeMap[type]];
+                } else {
+                    continue; // 跳过没有映射的类型
+                }
+                
+                // 为每个对应的中文类型创建数据区域
+                for (const chineseType of chineseTypes) {
+                    // 获取对应的卡片
+                    const card = findCardByTitle(chineseType);
+                    
+                    if (!card) continue;
+                    
+                    // 获取卡片内容区域
+                    const cardBody = card.querySelector('.data-card-body');
+                    
+                    // 如果已经有官方数据区域，跳过
+                    if (cardBody.querySelector('[class*="border-t border-gray-200"]:not(.missing-data-section)')) {
+                        continue;
+                    }
+                    
+                    // 创建官方数据区域
+                    const officialDataSection = document.createElement('div');
+                    officialDataSection.className = 'mt-4 pt-4 border-t border-gray-200';
+                    
+                    // 添加标题
+                    const title = document.createElement('h4');
+                    title.className = 'text-sm font-medium text-gray-700 mb-2';
+                    title.innerHTML = '<span class="bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">官方数据源</span>';
+                    officialDataSection.appendChild(title);
+                    
+                    // 添加数据项
+                    for (const [field, value] of Object.entries(robot)) {
+                        // 只显示有映射的字段，并且值不为0
+                        if (fieldMap[field] && (value !== 0)) {
+                            // 对于KDA，特殊检查是否全为0（格式为"0.0/0.0/0.0"）
+                            if (field === 'eaKDA' && typeof value === 'string') {
+                                // 检查KDA是否全为0或接近0
+                                const kdaValues = value.split('/');
+                                if (kdaValues.length === 3) {
+                                    // 如果KDA三个值都接近0，则跳过不显示
+                                    if (kdaValues.every(num => Math.abs(parseFloat(num)) < 0.1)) {
+                                        continue;
+                                    }
+                                }
+                            }
+                            
+                            const dataItem = document.createElement('div');
+                            dataItem.className = 'data-item';
+                            
+                            const itemTitle = document.createElement('div');
+                            itemTitle.className = 'data-item-title';
+                            itemTitle.textContent = fieldMap[field];
+                            
+                            const itemContent = document.createElement('div');
+                            itemContent.className = 'data-item-content flex justify-between items-center';
+                            
+                            // 创建数据值元素
+                            const valueSpan = document.createElement('span');
+                            
+                            // KDA 数据需要特殊处理，确保每个数字保留两位小数
+                            if (field === 'eaKDA' && typeof value === 'string') {
+                                // 解析 KDA 字符串 (格式: "x/y/z")
+                                const kdaValues = value.split('/');
+                                if (kdaValues.length === 3) {
+                                    // 将每个数字转为浮点数并保留两位小数
+                                    const formattedKDA = kdaValues.map(num => {
+                                        return parseFloat(num).toFixed(2);
+                                    }).join('/');
+                                    valueSpan.textContent = formattedKDA;
+                                } else {
+                                    valueSpan.textContent = value;
+                                }
+                            } else {
+                                // 对于非 KDA 数据，检查是否为数字，如果是则保留两位小数
+                                if (typeof value === 'number') {
+                                    valueSpan.textContent = value.toFixed(2);
+                                } else {
+                                    valueSpan.textContent = value;
+                                }
+                            }
+                            
+                            itemContent.appendChild(valueSpan);
+                            
+                            // 添加排名标签
+                            if (rankings && type in rankings && field in rankings[type]) {
+                                const teamRankInfo = rankings[type][field][collegeName];
+                                if (teamRankInfo) {
+                                    const rank = teamRankInfo.rank;
+                                    const total = teamRankInfo.total;
+                                    
+                                    const rankBadge = document.createElement('span');
+                                    let badgeClass = 'text-xs font-medium px-2 py-0.5 rounded-full ';
+                                    
+                                    // 根据排名设置颜色
+                                    if (rank <= 10) {
+                                        badgeClass += 'bg-red-100 text-red-800'; // 前10名红色
+                                    } else if (rank <= 20) {
+                                        badgeClass += 'bg-yellow-100 text-yellow-800'; // 前20名黄色
+                                    } else {
+                                        badgeClass += 'bg-gray-100 text-gray-800'; // 其余灰色
+                                    }
+                                    
+                                    rankBadge.className = badgeClass;
+                                    rankBadge.textContent = `排名: ${rank}/${total}`;
+                                    itemContent.appendChild(rankBadge);
+                                }
+                            }
+                            
+                            dataItem.appendChild(itemTitle);
+                            dataItem.appendChild(itemContent);
+                            officialDataSection.appendChild(dataItem);
+                        }
+                    }
+                    
+                    // 确保有内容再添加
+                    if (officialDataSection.querySelectorAll('.data-item').length > 0) {
+                        cardBody.appendChild(officialDataSection);
+                    }
+                }
+            }
+            
+            // 在展示官方数据后，检查并显示数据缺失提示
+            showDataMissingMessage(rankings);
+        }
+
+        // 页面加载后获取数据
+        document.addEventListener('DOMContentLoaded', fetchRobotData);
+    </script>
+</body>
+</html>

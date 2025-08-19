@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ team.school }} - {{ team.team }} 图片库</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://s4.zstatic.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Lightbox样式 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/css/lightbox.min.css">
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .transition-custom {
+                transition: all 0.2s ease;
+            }
+            .image-card {
+                @apply bg-white rounded-xl shadow-lg overflow-hidden transition-custom hover:shadow-xl;
+            }
+            .image-card-header {
+                @apply bg-blue-600 text-white p-4;
+            }
+            .image-card-body {
+                @apply p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4;
+            }
+            .image-item {
+                @apply border border-gray-200 rounded-lg overflow-hidden flex flex-col;
+            }
+            .image-wrapper {
+                @apply w-full h-48 overflow-hidden bg-gray-100;
+            }
+            .image-wrapper img {
+                @apply w-full h-full object-cover transition-custom;
+            }
+            .image-details {
+                @apply p-3 bg-white flex-grow;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col pt-16">
+    <!-- 导航栏 -->
+    <nav class="bg-blue-600 text-white shadow-lg fixed top-0 left-0 right-0 z-10">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <a href="{{ url_for('index') }}" class="text-white ml-4 text-xl font-bold">
+                    <i class="fa fa-shield text-xl"></i> 战队情报管理系统
+                </a>
+            </div>
+            <div class="flex space-x-3">
+                <a href="{{ url_for('view_team', id=team.id) }}" class="bg-white/20 text-white px-2 py-2 rounded-md font-medium transition-custom hover:bg-white/30 flex items-center">
+                    <i class="fa fa-arrow-left"></i>返回
+                </a>
+
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-2">{{ team.school }} - {{ team.team }} 图片库</h2>
+            <p class="text-gray-500">查看各机器人的图片资料</p>
+        </div>
+        
+        <!-- 图片卡片网格 -->
+        <div class="space-y-8">
+            {% set has_images = false %}
+
+            {% for category, category_images in images.items() %}
+                {% if category_images %}
+                {% set has_images = true %}
+                <div class="image-card" id="{{ category }}">
+                    <div class="image-card-header">
+                        <h3 class="text-lg font-bold">{{ category }}</h3>
+                    </div>
+                    <div class="image-card-body">
+                        {% for image in category_images %}
+                        <div class="image-item">
+                            <div class="image-wrapper">
+                                <a href="{{ url_for('static', filename='uploads/' + image.filename) }}" data-lightbox="{{ category }}" data-title="{{ image.description or '无描述' }}">
+                                    <img src="{{ url_for('static', filename='uploads/' + image.filename) }}" alt="{{ image.description or '无描述' }}">
+                                </a>
+                            </div>
+                            <div class="image-details">
+                                <p class="text-sm text-gray-600">{{ image.description or '无描述' }}</p>
+                                <p class="text-xs text-gray-400 mt-1">上传于 
+                                {% set utc_time = image.uploaded_at %}
+                                {% set local_time = utc_time.replace(hour=(utc_time.hour + 8) % 24) %}
+                                {{ local_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+            
+            
+            {% if has_images == false %}
+            <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                <div class="flex flex-col items-center">
+                    <i class="fa fa-image text-gray-400 text-5xl mb-4"></i>
+                    <a href="{{ url_for('edit_team', id=team.id) }}"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-custom">
+                        去添加图片
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2025 狼牙战队 | 设计与开发</p>
+        </div>
+    </footer>
+
+    <!-- Lightbox脚本 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/js/lightbox.min.js"></script>
+    <script>
+        // 初始化Lightbox
+        lightbox.option({
+            'resizeDuration': 200,
+            'wrapAround': true
+        });
+        
+        // 为卡片添加悬停动画效果
+        document.querySelectorAll('.image-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.classList.add('scale-[1.01]');
+            });
+            card.addEventListener('mouseleave', () => {
+                card.classList.remove('scale-[1.01]');
+            });
+        });
+        
+        // 图片悬停效果
+        document.querySelectorAll('.image-wrapper img').forEach(img => {
+            img.addEventListener('mouseenter', () => {
+                img.classList.add('scale-110');
+            });
+            img.addEventListener('mouseleave', () => {
+                img.classList.remove('scale-110');
+            });
+        });
+    </script>
+</body>
+</html>

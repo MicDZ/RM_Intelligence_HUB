@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑 {{ team.school }} - {{ team.team }} 数据</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://s4.zstatic.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .transition-custom {
+                transition: all 0.2s ease;
+            }
+            .card-shadow {
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .data-card {
+                @apply bg-white rounded-xl shadow-lg overflow-hidden transition-custom hover:shadow-xl;
+            }
+            .data-card-header {
+                @apply bg-blue-600 text-white p-4;
+            }
+            .data-card-body {
+                @apply p-5;
+            }
+            .data-item {
+                @apply mb-2 pb-2 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0;
+            }
+            .data-item-title {
+                @apply text-sm font-medium text-gray-700 mb-1;
+            }
+            .data-item-content {
+                @apply px-4 py-2 bg-gray-50 rounded-lg min-h-[2.5rem];
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col pt-16"> <!-- 添加pt-16顶部内边距 -->
+    <!-- 导航栏 - 添加fixed和z-10类 -->
+    <nav class="bg-blue-600 text-white shadow-lg fixed top-0 left-0 right-0 z-10">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <a href="{{ url_for('index') }}" class="text-white ml-4 text-xl font-bold">
+                    <i class="fa fa-shield text-xl"></i> 战队情报管理系统
+                </a>
+            </div>
+            <div class="flex space-x-3">
+
+                <button type="submit" form="edit-form" class="bg-green-500 hover:bg-green-600 text-white px-2 py-2 rounded-md font-medium transition-custom flex items-center">
+                    <i class="fa fa-save mr-2"></i>保存
+                </button>
+                <a href="{{ url_for('view_team', id=team.id) }}" class="bg-white/20 text-white px-2 py-2 rounded-md font-medium transition-custom hover:bg-white/30 flex items-center">
+                    <i class="fa fa-arrow-left mr-2"></i>取消
+                </a>
+
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-2">编辑 {{ team.school }} - {{ team.team }} 数据</h2>
+            <p class="text-gray-500">修改战队基本信息和战术数据</p>
+            
+            <!-- 添加兵种显示控制区域 -->
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <h3 class="text-lg font-medium text-blue-800 mb-2">显示兵种</h3>
+                <div class="flex flex-wrap gap-3" id="robot-filter">
+                    {% for category in data.keys() %}
+                    <label class="inline-flex items-center px-3 py-2 bg-white rounded-md border border-gray-200 shadow-sm cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="robot-toggle" value="{{ category }}" class="form-checkbox h-4 w-4 text-blue-600 rounded mr-2" 
+                               {% if category in ['步兵1', '步兵2'] %}checked{% endif %}>
+                        <span>{{ category }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <form method="POST" id="edit-form" class="space-y-6">
+            <!-- 基本信息卡片 -->
+            <div class="data-card">
+                <div class="data-card-header flex justify-between items-center">
+                    <div class="flex items-center">
+                        <h3 class="text-lg font-bold">基本信息</h3>
+                    </div>
+                </div>
+                <div class="data-card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div class="data-item">
+                            <div class="data-item-title">学校名称</div>
+                            <input type="text" name="school" value="{{ team.school }}" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom">
+                        </div>
+                        <div class="data-item">
+                            <div class="data-item-title">队伍名称</div>
+                            <input type="text" name="team" value="{{ team.team }}" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom">
+                        </div>
+                        <div class="data-item">
+                            <div class="data-item-title">积分榜排名</div>
+                            <input type="number" name="rank" value="{{ team.rank or '' }}" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom"
+                                   placeholder="输入队伍积分榜排名">
+                        </div>
+                        <div class="data-item">
+                            <div class="data-item-title">完整形态排名</div>
+                            <input type="number" name="rank_exam" value="{{ team.rank_exam or '' }}" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom"
+                                   placeholder="输入队伍完整形态排名">
+                        </div>
+                        <div class="data-item">
+                            <div class="data-item-title">所属小组</div>
+                            <select name="group" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom">
+                                <option value="A" {% if team.group == 'A' %}selected{% endif %}>A组</option>
+                                <option value="B" {% if team.group == 'B' %}selected{% endif %}>B组</option>
+                            </select>
+                        </div>
+                         <div class="data-item">
+                            <div class="data-item-title">初始金币</div>
+                            <input type="number" name="money" value="{{ team.money or 0 }}" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom"
+                                   placeholder="输入队伍初始金币">
+                        </div>
+                        <div class="data-item">
+                            <div class="data-item-title">简评</div>
+                            <input type="text" name="comment" value="{{ team.comment or '' }}" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom"
+                                   placeholder="输入队伍简评">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 战术数据卡片网格 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for category, items in data.items() %}
+                    {% if true %}
+                    <!-- {{ category }}数据 -->
+                    <div class="data-card robot-card" data-robot-type="{{ category }}" {% if category not in ['步兵1', '步兵2'] %}style="display: none;"{% endif %}>
+                        <div class="data-card-header flex justify-between items-center">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-bold">{{ category }}</h3>
+                            </div>
+                            <button type="button" class="text-white bg-green-500 hover:bg-green-600 rounded-md px-3 py-1 text-sm upload-button z-10" data-robot="{{ category }}">
+                                <i class="fa fa-upload mr-1"></i> 上传图片
+                            </button>
+                        </div>
+                        <div class="data-card-body">
+                            {% for item in items %}
+                            <div class="data-item">
+                                <div class="data-item-title">{{ item.item }}</div>
+                                <textarea name="content_{{ item.id }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom" rows="2">{{ item.content or '' }}</textarea>
+                            </div>
+                            {% endfor %}
+                            
+                            <!-- 图片预览区 -->
+                            {% if images[category] %}
+                            <div class="mt-4 border-t pt-4">
+                                <h4 class="text-sm font-medium text-gray-700 mb-2">已上传图片 ({{ images[category]|length }})</h4>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    {% for image in images[category] %}
+                                    <div class="relative group border rounded-lg overflow-hidden bg-gray-100">
+                                        <img src="{{ url_for('static', filename='uploads/' + image.filename) }}" alt="{{ image.description }}" class="w-full h-24 object-cover">
+                                        <div class="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                                            <a href="{{ url_for('static', filename='uploads/' + image.filename) }}" target="_blank" class="text-white bg-blue-500 rounded-full p-2 hover:bg-blue-600 transition-colors">
+                                                <i class="fa fa-eye"></i>
+                                            </a>
+                                            <form method="POST" action="{{ url_for('delete_image', image_id=image.id) }}" class="inline">
+                                                <button type="submit" class="text-white bg-red-500 rounded-full p-2 hover:bg-red-600 transition-colors" onclick="return confirm('确定要删除这张图片吗？')">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </form>
+    </main>
+
+    <!-- 上传图片模态窗口 -->
+    <div id="upload-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div class="absolute inset-0 bg-black opacity-50"></div>
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full relative z-10">
+            <h3 class="text-xl font-bold mb-4">上传<span id="robot-type-display"></span>图片</h3>
+            <form action="" method="POST" enctype="multipart/form-data" id="upload-form">
+                <input type="hidden" name="robot_type" id="robot-type-input">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">选择图片</label>
+                    <input type="file" name="image" accept="image/*" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">图片描述</label>
+                    <textarea name="description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom" rows="2" placeholder="添加对图片的描述（可选）"></textarea>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="close-modal" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-custom">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-custom">上传</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2025 狼牙战队 | 设计与开发</p>
+        </div>
+    </footer>
+
+    <script>
+        // 为卡片添加悬停动画效果
+        document.querySelectorAll('.data-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.classList.add('scale-[1.01]');
+            });
+            card.addEventListener('mouseleave', () => {
+                card.classList.remove('scale-[1.01]');
+            });
+        });
+        
+        // 设置兵种过滤功能
+        function setupRobotFilter() {
+            const checkboxes = document.querySelectorAll('input[name="robot-toggle"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const robotType = this.value;
+                    const cards = document.querySelectorAll(`.robot-card[data-robot-type="${robotType}"]`);
+                    
+                    cards.forEach(card => {
+                        if (this.checked) {
+                            card.style.display = '';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        }
+        
+        // 存储初始表单值
+        let initialFormValues = {};
+        
+        // 记录表单初始值
+        function saveInitialFormValues() {
+            const form = document.getElementById('edit-form');
+            const formElements = form.elements;
+            
+            for (let i = 0; i < formElements.length; i++) {
+                const element = formElements[i];
+                if (element.name) {
+                    // 保存初始值
+                    initialFormValues[element.name] = element.value;
+                }
+            }
+            console.log('已记录表单初始值:', initialFormValues);
+        }
+        
+        // 表单提交处理
+        function setupFormSubmission() {
+            const form = document.getElementById('edit-form');
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // 创建一个FormData对象用于存储修改后的数据
+                const formData = new FormData();
+                const formElements = form.elements;
+                let hasChanges = false;
+                
+                // 检查每个表单元素
+                for (let i = 0; i < formElements.length; i++) {
+                    const element = formElements[i];
+                    if (element.name) {
+                        // 检查值是否已更改
+                        if (element.value !== initialFormValues[element.name]) {
+                            formData.append(element.name, element.value);
+                            hasChanges = true;
+                            console.log(`字段 ${element.name} 已更改: ${initialFormValues[element.name]} -> ${element.value}`);
+                        } else {
+                            // 对于未更改的战术数据字段，添加一个特殊标记
+                            if (element.name.startsWith('content_')) {
+                                formData.append(`unchanged_${element.name}`, 'true');
+                            }
+                        }
+                    }
+                }
+                
+                // 如果没有更改，显示提示并取消提交
+                if (!hasChanges) {
+                    alert('没有检测到数据变化，无需保存');
+                    return;
+                }
+                
+                // 添加表单提交的url
+                const submitUrl = form.action;
+                
+                // 发送修改后的数据
+                fetch(submitUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        return response.text();
+                    }
+                })
+                .then(data => {
+                    if (data) {
+                        // 处理可能的JSON响应
+                        try {
+                            const jsonData = JSON.parse(data);
+                            if (jsonData.message) {
+                                alert(jsonData.message);
+                            }
+                            if (jsonData.redirect) {
+                                window.location.href = jsonData.redirect;
+                            }
+                        } catch (e) {
+                            // 不是JSON格式，可能是HTML
+                            console.log('服务器响应:', data);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('提交表单时出错:', error);
+                    alert('保存失败，请重试');
+                });
+            });
+        }
+        
+        // 上传图片模态窗口
+        document.addEventListener('DOMContentLoaded', () => {
+            // 设置兵种过滤功能
+            setupRobotFilter();
+            
+            // 保存表单初始值
+            saveInitialFormValues();
+            
+            // 设置表单提交处理
+            setupFormSubmission();
+            
+            const uploadButtons = document.querySelectorAll('.upload-button');
+            const uploadModal = document.getElementById('upload-modal');
+            const closeModal = document.getElementById('close-modal');
+            const robotTypeDisplay = document.getElementById('robot-type-display');
+            const robotTypeInput = document.getElementById('robot-type-input');
+            const uploadForm = document.getElementById('upload-form');
+            
+            uploadButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const robotType = button.dataset.robot;
+                    robotTypeDisplay.textContent = robotType;
+                    robotTypeInput.value = robotType;
+                    uploadForm.action = "{{ url_for('upload_image', team_id=team.id) }}";
+                    uploadModal.classList.remove('hidden');
+                });
+            });
+            
+            closeModal.addEventListener('click', () => {
+                uploadModal.classList.add('hidden');
+            });
+            
+            // 点击模态窗口外部关闭
+            uploadModal.addEventListener('click', (e) => {
+                if (e.target === uploadModal) {
+                    uploadModal.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

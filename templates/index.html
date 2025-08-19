@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>战队列表 & 梯队排名</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://s4.zstatic.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .echelon-card {
+                margin-bottom: 2rem;
+                padding: 1.5rem;
+                border-radius: 0.75rem;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+            .gold { background: #FFD7001A; border-left: 4px solid #FFD700; } /* 金色 */
+            .silver { background: #C0C0C01A; border-left: 4px solid #C0C0C0; } /* 银色 */
+            .bronze { background: #CD7F321A; border-left: 4px solid #CD7F32; } /* 铜色 */
+            .iron { background: #6969691A; border-left: 4px solid #696969; } /* 铁色 */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- 导航栏 -->
+    <nav class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                
+                                <a href="{{ url_for('index') }}" class="text-white ml-4 text-xl font-bold">
+                    <i class="fa fa-shield text-xl"></i> 战队情报管理系统
+                </a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="{{ url_for('team_ranking') }}" 
+                   class="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-2 rounded-md font-medium transition-custom flex items-center">
+                    <i class="fa fa-trophy"></i>积分榜
+                </a>
+                <!-- <a href="{{ url_for('add_team') }}"
+                    class="bg-white text-blue-600 px-4 py-2 rounded-md font-medium transition-custom hover:bg-gray-100 flex items-center">
+                    <i class="fa fa-plus mr-2"></i>添加战队
+                </a> -->
+                <a href="{{ url_for('logout') }}"
+                    class="bg-red-500 hover:bg-red-600 text-white px-2 py-2 rounded-md font-medium transition-custom flex items-center">
+                    <i class="fa fa-sign-out"></i>登出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <!-- 搜索栏 -->
+        <div class="mb-8 bg-white rounded-xl shadow-lg p-4">
+            <div class="flex flex-col md:flex-row md:items-center md:space-x-4">
+                <div class="mb-4 md:mb-0 flex-grow">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">搜索战队</label>
+                    <div class="relative">
+                        <input type="text" id="search-team" placeholder="输入学校或队伍名称"
+                            class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa fa-search text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                    <button id="sort-school"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-custom flex items-center justify-center">
+                        <i class="fa fa-sort-alpha-asc mr-2"></i>按学校排序
+                    </button>
+                    <button id="sort-date"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-custom flex items-center justify-center">
+                        <i class="fa fa-calendar mr-2"></i>按添加时间
+                    </button>
+                    <button id="sort-rank"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-custom flex items-center justify-center">
+                        <i class="fa fa-trophy mr-2"></i>按积分榜排名
+                    </button>
+                </div> -->
+            </div>
+        </div>
+
+        <!-- 战队列表 -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden table-shadow mb-8">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-gray-50 text-left text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-2 font-semibold" style="min-width: 130px;">操作</th>
+                            <th class="py-3 px-2 font-semibold" style="min-width: 100px;">未更新条目</th>
+                            <th class="py-3 px-2 font-semibold" style="min-width: 130px;">学校名称</th>
+                            <th class="py-3 px-2 font-semibold" style="min-width: 120px;">队伍名称</th>
+                            <th class="py-3 px-2 font-semibold" style="min-width: 80px;">小组</th>
+                            <th class="py-3 px-2 font-semibold" style="min-width: 120px;">积分榜排名</th>
+                            <th class="py-3 px-2 font-semibold" style="min-width: 120px;">完整形态排名</th>
+                            <th class="py-3 px-2 font-semibold" style="min-width: 100px;">初始金币</th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-600 text-sm" id="team-table-body">
+                        {% for team in teams %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-50 transition-custom">
+                            <td class="py-3 px-2">
+                                <div class="flex space-x-2">
+                                    <a href="{{ url_for('view_team', id=team.id) }}"
+                                        class="bg-blue-100 text-blue-600 px-1 py-1 rounded-md flex items-center transition-custom hover:bg-blue-200">
+                                        <i class="fa fa-eye mr-1"></i> 查看
+                                    </a>
+                                    <a href="{{ url_for('edit_team', id=team.id) }}"
+                                        class="bg-green-100 text-green-600 px-1 py-1 rounded-md flex items-center transition-custom hover:bg-green-200">
+                                        <i class="fa fa-pencil mr-1"></i> 编辑
+                                    </a>
+
+                                </div>
+                            </td>
+                             <td class="py-3 px-2">
+                                {% set empty_count = update_stats[team.id] %}
+                                <span class="px-2 py-1 rounded-full text-xs font-medium
+                                    {% if empty_count > 60 %}bg-red-100 text-red-800{% elif empty_count > 40 %}bg-yellow-100 text-yellow-800{% else %}bg-green-100 text-green-800{% endif %}">
+                                    {{ empty_count }}项缺失
+                                </span>
+                            </td>
+                            <td class="py-3 px-2">{{ team.school }}</td>
+                            <td class="py-3 px-2">{{ team.team }}</td>
+                            <td class="py-3 px-2">
+                                <span class="px-2 py-1 rounded-full text-xs font-medium
+                                    {% if team.group == 'A' %}bg-blue-100 text-blue-800{% else %}bg-purple-100 text-purple-800{% endif %}">
+                                    {{ team.group }}组
+                                </span>
+                            </td>
+                            <td class="py-3 px-2">{{ team.rank or '未排名' }}</td>
+                            <td class="py-3 px-2">{{ team.rank_exam or '未排名' }}</td>
+                            <td class="py-3 px-2">{{ team.money }}</td>
+                           
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- 梯队排名展示 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- 前四梯队：金色 -->
+            <div class="echelon-card gold">
+                <h3 class="text-lg font-bold text-yellow-800 mb-4">1-4名</h3>
+                <div class="space-y-4">
+                    {% for team in echelons.gold %}
+                    <div class="flex items-center space-x-4">
+                        <span class="text-xl font-bold text-yellow-600">{{ loop.index }}</span>
+                        <div>
+                            <div class="text-sm font-medium">{{ team.school }}</div>
+                            <div class="text-xs text-gray-500">完整形态排名：{{ team.rank_exam }}</div>
+                            <div class="text-xs text-gray-500">积分榜排名：{{ team.rank }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 前八梯队：银色 -->
+            <div class="echelon-card silver">
+                <h3 class="text-lg font-bold text-gray-600 mb-4">5-8名</h3>
+                <div class="space-y-4">
+                    {% for team in echelons.silver %}
+                    <div class="flex items-center space-x-4">
+                        <span class="text-xl font-bold text-gray-500">{{ loop.index + 4 }}</span>
+                        <div>
+                            <div class="text-sm font-medium">{{ team.school }}</div>
+                            <div class="text-xs text-gray-500">完整形态排名：{{ team.rank_exam }}</div>
+                            <div class="text-xs text-gray-500">积分榜排名：{{ team.rank }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 前十六梯队：铜色 -->
+            <div class="echelon-card bronze">
+                <h3 class="text-lg font-bold text-orange-600 mb-4">9-16名</h3>
+                <div class="space-y-4">
+                    {% for team in echelons.bronze %}
+                    <div class="flex items-center space-x-4">
+                        <span class="text-xl font-bold text-orange-500">{{ loop.index + 8 }}</span>
+                        <div>
+                            <div class="text-sm font-medium">{{ team.school }}</div>
+                            <div class="text-xs text-gray-500">完整形态排名：{{ team.rank_exam }}</div>
+                            <div class="text-xs text-gray-500">积分榜排名：{{ team.rank }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 17-32名梯队：铁色 -->
+            <div class="echelon-card iron">
+                <h3 class="text-lg font-bold text-gray-700 mb-4">17-32名</h3>
+                <div class="space-y-4">
+                    {% for team in echelons.iron %}
+                    <div class="flex items-center space-x-4">
+                        <span class="text-xl font-bold text-gray-600">{{ loop.index + 16 }}</span>
+                        <div>
+                            <div class="text-sm font-medium">{{ team.school }}</div>                            
+                            <div class="text-xs text-gray-500">完整形态排名：{{ team.rank_exam }}</div>
+                            <div class="text-xs text-gray-500">积分排名：{{ team.rank }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 空状态提示 -->
+        <div id="empty-state" class="hidden bg-white rounded-xl shadow-lg p-8 text-center mt-8">
+            <div class="flex flex-col items-center">
+                <i class="fa fa-folder-open text-gray-400 text-5xl mb-4"></i>
+                <h3 class="text-xl font-medium text-gray-800 mb-2">暂无战队数据</h3>
+                <p class="text-gray-600 mb-6">点击上方"添加战队"按钮开始创建您的第一支战队</p>
+                <!-- <a href="{{ url_for('add_team') }}"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-2 rounded-lg transition-custom">
+                    添加战队
+                </a> -->
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2025 狼牙战队 | 设计与开发</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 搜索功能
+            const searchInput = document.getElementById('search-team');
+            const tableBody = document.getElementById('team-table-body');
+            const emptyState = document.getElementById('empty-state');
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                const rows = tableBody.querySelectorAll('tr');
+                let hasResults = false;
+
+                rows.forEach(row => {
+                    const school = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                    const team = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                    const rank = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+
+                    if (school.includes(query) || team.includes(query) || rank.includes(query)) {
+                        row.classList.remove('hidden');
+                        hasResults = true;
+                    } else {
+                        row.classList.add('hidden');
+                    }
+                });
+
+                // 显示或隐藏空状态（仅针对梯队部分，队伍列表仍保留原有逻辑）
+                if (!hasResults && query.length > 0) {
+                    tableBody.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                } else {
+                    tableBody.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                }
+            });
+
+            // 排序功能（保留原有逻辑）
+
+
+            // 初始检查数据
+            if (tableBody.querySelectorAll('tr').length === 0) {
+                tableBody.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+
+</html>

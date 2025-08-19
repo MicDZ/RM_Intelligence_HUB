@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>战队积分榜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://s4.zstatic.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .transition-custom {
+                transition: all 0.2s ease;
+            }
+            .zone-card {
+                @apply bg-white rounded-xl shadow-lg overflow-hidden mb-8;
+            }
+            .zone-header {
+                @apply bg-blue-600 text-white p-4;
+            }
+            .group-card {
+                @apply border-t border-gray-200;
+            }
+            .group-header {
+                @apply bg-gray-50 p-3 font-medium text-gray-700;
+            }
+            .team-row {
+                @apply border-b border-gray-200 hover:bg-gray-50 transition-custom;
+            }
+            .team-row:last-child {
+                @apply border-b-0;
+            }
+            .team-rank {
+                @apply font-bold text-lg;
+            }
+            .rank-1 { @apply text-yellow-600; }
+            .rank-2 { @apply text-gray-500; }
+            .rank-3 { @apply text-amber-700; }
+            .team-logo {
+                @apply w-10 h-10 rounded-full object-cover border border-gray-200;
+            }
+            .team-name {
+                @apply font-medium hover:text-blue-600 transition-custom;
+            }
+            .stat-value {
+                @apply text-sm text-gray-700;
+            }
+            .win-record {
+                @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col pt-16">
+    <!-- 导航栏 -->
+    <nav class="bg-blue-600 text-white shadow-lg fixed top-0 left-0 right-0 z-10">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <a href="{{ url_for('index') }}" class="text-white ml-4 text-xl font-bold">
+                    <i class="fa fa-shield text-xl"></i> 战队情报管理系统
+                </a>
+            </div>
+            <div class="flex space-x-3">
+
+                <a href="{{ url_for('logout') }}" class="bg-red-500 hover:bg-red-600 text-white px-2 py-2 rounded-md font-medium transition-custom flex items-center">
+                    <i class="fa fa-sign-out mr-2"></i>登出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-2">战队积分榜</h2>
+            <p class="text-gray-500">东部赛区战队积分排名</p>
+            <p class="text-sm text-gray-500 mt-2">
+                排名规则：按照<span class="font-medium">胜场数</span> > 
+                <span class="font-medium">负场数（越少越靠前）</span> > 
+                <span class="font-medium">对手分</span> > 
+                <span class="font-medium">局均总基地净胜血量</span> > 
+                <span class="font-medium">局均总前哨站净胜血量</span> > 
+                <span class="font-medium">局均全队总伤害血量</span>的优先级排序
+            </p>
+        </div>
+
+        <!-- 搜索框 -->
+        <div class="mb-8 bg-white rounded-xl shadow-lg p-4">
+            <div class="flex flex-col md:flex-row md:items-center md:space-x-4">
+                <div class="mb-4 md:mb-0 flex-grow">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">搜索战队</label>
+                    <div class="relative">
+                        <input type="text" id="search-team" placeholder="输入学校或队伍名称" 
+                            class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-custom">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa fa-search text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% for zone in zones %}
+            {% if zone.name == "东部赛区" %}
+            <!-- 赛区卡片 -->
+            <div class="zone-card">
+                <div class="zone-header">
+                    <h3 class="text-lg font-bold">{{ zone.name }}</h3>
+                </div>
+
+                {% for group in zone.groups %}
+                <!-- 小组 -->
+                <div class="group-card">
+                    <div class="group-header">
+                        <h4>{{ group.name }}</h4>
+                    </div>
+                    
+                    <!-- 队伍列表 -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="text-xs uppercase text-gray-600 bg-gray-100">
+                                    <th class="px-4 py-3 font-semibold">排名</th>
+                                    <th class="px-4 py-3 font-semibold">战队</th>
+                                    <th class="px-4 py-3 font-semibold">胜/平/负</th>
+                                    <th class="px-4 py-3 font-semibold">胜场数</th>
+                                    <th class="px-4 py-3 font-semibold">负场数</th>
+                                    <th class="px-4 py-3 font-semibold">对手分</th>
+                                    <th class="px-4 py-3 font-semibold">局均总基地净胜血量</th>
+                                    <th class="px-4 py-3 font-semibold">局均总前哨站净胜血量</th>
+                                    <th class="px-4 py-3 font-semibold">局均全队总伤害血量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for team in group.teams %}
+                                <tr class="team-row">
+                                    <td class="px-4 py-3">
+                                        <span class="team-rank {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% endif %}">
+                                            {{ loop.index }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="flex items-center space-x-3">
+                                            {% if team.collegeLogo %}
+                                            <img src="{{ team.collegeLogo }}" alt="{{ team.collegeName }}" class="team-logo">
+                                            {% else %}
+                                            <div class="team-logo bg-gray-200 flex items-center justify-center">
+                                                <i class="fa fa-university text-gray-400"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                {% if team.collegeName in team_dict %}
+                                                <a href="{{ url_for('view_team', id=team_dict[team.collegeName]) }}" class="team-name block">
+                                                    {{ team.collegeName }}
+                                                </a>
+                                                {% else %}
+                                                <span class="team-name block">{{ team.collegeName }}</span>
+                                                {% endif %}
+                                                <span class="text-xs text-gray-500">{{ team.teamName }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="win-record">{{ team.record }}</span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="stat-value">{{ team.wins }}</span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="stat-value">{{ team.losses }}</span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="stat-value">{{ team.opponent_score }}</span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="stat-value {% if team.base_hp_diff > 0 %}text-green-600{% elif team.base_hp_diff < 0 %}text-red-600{% endif %}">
+                                            {{ team.base_hp_diff }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="stat-value {% if team.outpost_hp_diff > 0 %}text-green-600{% elif team.outpost_hp_diff < 0 %}text-red-600{% endif %}">
+                                            {{ team.outpost_hp_diff }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="stat-value">{{ team.total_damage }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endfor %}
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2025 狼牙战队 | 设计与开发</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 搜索功能
+            const searchInput = document.getElementById('search-team');
+            const teamRows = document.querySelectorAll('.team-row');
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                
+                teamRows.forEach(row => {
+                    const teamName = row.querySelector('.team-name').textContent.toLowerCase();
+                    const collegeName = row.querySelector('.text-xs.text-gray-500').textContent.toLowerCase();
+                    
+                    if (teamName.includes(query) || collegeName.includes(query)) {
+                        row.classList.remove('hidden');
+                    } else {
+                        row.classList.add('hidden');
+                    }
+                });
+                
+                // 检查每个组是否有可见的队伍
+                document.querySelectorAll('.group-card').forEach(groupCard => {
+                    const visibleTeams = groupCard.querySelectorAll('.team-row:not(.hidden)');
+                    if (visibleTeams.length === 0) {
+                        groupCard.classList.add('hidden');
+                    } else {
+                        groupCard.classList.remove('hidden');
+                    }
+                });
+                
+                // 检查每个赛区是否有可见的组
+                document.querySelectorAll('.zone-card').forEach(zoneCard => {
+                    const visibleGroups = zoneCard.querySelectorAll('.group-card:not(.hidden)');
+                    if (visibleGroups.length === 0) {
+                        zoneCard.classList.add('hidden');
+                    } else {
+                        zoneCard.classList.remove('hidden');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
