@@ -155,9 +155,11 @@ logo_download_thread.start()
 db = SQLAlchemy(app)
 
 # 登录密码 - 建议更改为强密码
-LOGIN_PASSWORD = "password"
+try:
+    LOGIN_PASSWORD = os.getenv('RMINTEL_LOGIN_PASSWORD')
+except Exception as e:
+    print(f"请在环境变量中设置密码")
 
-# 登录检查装饰器
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
